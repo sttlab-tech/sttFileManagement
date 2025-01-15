@@ -1,0 +1,152 @@
+openapi: 3.0.0
+info:
+  title: FileManagementAPI
+  version: 1.0.0
+servers:
+  - url: http://localhost:5555/FileManagementAPI
+paths:
+  /files:
+    post:
+      summary: Upload File in Binary Format
+      operationId: uploadFileBinary
+      parameters:
+        - name: X-Filename
+          in: header
+          description: The name of the file being uploaded.
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+        required: true
+      responses:
+        "200":
+          description: File Uploaded Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "400":
+          description: Invalid Input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    get:
+      summary: Get List of Files
+      operationId: getFiles
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/File'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+
+  /files/{fileName}:
+    get:
+      summary: Get File by Name
+      operationId: getFileByName
+      parameters:
+        - name: fileName
+          in: path
+          description: The name of the file to retrieve.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File Retrieved Successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      summary: Delete File by Name
+      operationId: deleteFileByName
+      parameters:
+        - name: fileName
+          in: path
+          description: The name of the file to delete.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File Deleted Successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "404":
+          description: File Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+
+
+components:
+  schemas:
+    Status:
+      type: object
+      properties:
+        code:
+          type: string
+          description: A unique error code representing the status.
+        message:
+          type: string
+          description: A human-readable message describing the status.
+        transactionId:
+          type: string
+          description: The transactionId
+      required:
+        - code
+        - message
+    File:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the file.
+      required:
+        - name
