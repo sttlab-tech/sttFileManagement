@@ -1,0 +1,17 @@
+services:
+  msr-hello-world:
+    container_name: msr-file-management
+    image: 003933478843.dkr.ecr.eu-central-1.amazonaws.com/sttlab/msr-file-management:0.0.1
+    ports:
+      - "15555:5555"
+    env_file:
+      - .env
+    volumes:
+      - ./application.properties:/opt/softwareag/IntegrationServer/application.properties
+      - ./resources/config/fileAccessControl.cnf:/opt/softwareag/IntegrationServer/packages/WmPublic/config/fileAccessControl.cnf
+      - $HOME/dev/files:/files
+    networks:
+      - wm
+
+networks:
+  wm:

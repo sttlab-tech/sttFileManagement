@@ -1,0 +1,186 @@
+# -- Number of replicates in Deployment
+replicaCount: 2
+
+statefulSet: false
+
+image:
+  repository: "default-route-openshift-image-registry.apps.678663c1feba7dc9c41f356d.ocp.techzone.ibm.com/helloworld/msr-file-management"
+  pullPolicy: IfNotPresent
+  tag:        "0.0.1"
+
+imagePullSecrets: 
+ - name: ocp-regcred
+
+nameOverride: ""
+fullnameOverride: "stt-file-management"
+
+containerName: msr-file-management
+
+# -- Extra volumes that should be mounted.
+extraVolumes:
+- name: fileshare
+  persistentVolumeClaim:
+    claimName: stt-file-management
+- name: file-access-control 
+  configMap:
+    name: file-access-control 
+
+# -- Extra environment properties to be passed on to the microservice runtime
+extraEnvs: 
+- name: SERVER
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+
+# -- Secret mounts, A list of secrets and their paths to mount inside the pod
+secretMounts:
+  - name: msr-secrets
+    secretName: msr-secrets
+    path: /etc/secrets
+
+# -- Secret volumes, A list of secrets
+secretVolumes:
+  - name: msr-secrets
+    secretName: msr-secrets
+
+# -- Extra volume mounts
+extraVolumeMounts:
+- name: fileshare
+  mountPath: /files
+  readOnly: false
+- name: file-access-control 
+  mountPath: /opt/softwareag/IntegrationServer/packages/WmPublic/config/fileAccessControl.cnf
+  readOnly: true  
+  subPath: fileAccessControl.cnf
+
+
+# -- Extra config maps for addtional configurations such as extra ports, etc.
+extraConfigMaps: 
+- name: file-access-control
+  data:
+    fileAccessControl.cnf: |
+      allowedWritePaths=/files/**
+      allowedReadPaths=/files
+      allowedDeletePaths=/files/**
+
+
+# -- startup probe for container
+startupProbe: 
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 20
+  failureThreshold: 32
+  periodSeconds: 5            
+
+# -- Configure liveness probe
+livenessProbe: 
+  httpGet:
+    path: /health/liveness
+    port: http
+  initialDelaySeconds: 0
+  periodSeconds: 15
+  timeoutSeconds: 2
+  successThreshold: 1
+  failureThreshold: 3
+
+# -- Configure readiness probe
+readinessProbe: 
+  httpGet:
+    path: /health/readiness
+    port: http
+  initialDelaySeconds: 0
+  periodSeconds: 15
+  timeoutSeconds: 2
+  successThreshold: 1
+  failureThreshold: 3
+
+microservicesruntime:
+  httpsPort:                5543
+  httpsPortScheme:          "HTTPS"
+  httpPort:                 5555
+  httpPortScheme:          "HTTP"
+  diagnosticPort:           9999
+
+  licenseKeyProvided: false
+
+  memoryHeap:
+    min:                    "512M"
+    max:                    "1024M"
+
+  # -- Defines installation folder which was using on image creation
+  installDir:      /opt/softwareag/IntegrationServer # This is the installation directory which you use on creating the image
+
+  propertiesFile: 
+    content: |
+      settings.watt.net.default.accept=application/json
+      settings.watt.server.ns.lockingMode=none
+      settings.watt.server.pipeline.processor=false
+      settings.watt.net.localhost={{ include "common.names.fullname" . }}
+      settings.watt.server.scheduler.logical.hostname={{ include "common.names.fullname" . }}
+      settings.watt.server.saveConfigFiles=false 
+      settings.watt.server.audit.logFilesToKeep=1
+      settings.watt.server.serverlogFilesToKeep=1
+      settings.watt.server.stats.logFilesToKeep=1
+
+      statisticsdatacollector.monitorConfig.enabled=false
+
+      user.Administrator.password=$secret{ADMIN_PASSWORD}
+
+      globalvariable.FILE_UPLOAD_DIRECTORY.value=/files
+
+
+serviceAccount:
+  create: true
+  name: "msr-file-management"
+
+podSecurityContext: {}
+#  fsGroup: 0
+
+securityContext: 
+  capabilities:
+    drop:
+    - ALL
+  runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 5555
+
+ingress:
+  enabled: false
+
+resources:
+  msrContainer:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# -- Define values for Prometheus Operator to scrap metrics via annotation or ServiceMonitor.
+prometheus:
+  path:          "/metrics"
+  port:          "5555"
+  scheme:        "http"
+  ## -- Only used on annotation 
+  scrape:        "true"
+  ## -- Only used on ServiceMonitor
+  interval:      10s
+  ## -- Only used on ServiceMonitor
+  scrapeTimeout: 10s
+
+# -- Create and enable ServiceMonitor. The default is `false`.
+serviceMonitor:
+  enabled: true
+
+metering:
+  enabled: false

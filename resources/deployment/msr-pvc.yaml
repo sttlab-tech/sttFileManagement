@@ -1,0 +1,12 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: stt-file-management
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1M
+  storageClassName: ocs-storagecluster-cephfs
+  volumeMode: Filesystem
